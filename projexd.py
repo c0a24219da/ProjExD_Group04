@@ -250,6 +250,8 @@ def run_game():
                                         opponent_player.field.remove(selected_card2)
                                         opponent_player.graveyard.append(selected_card2)
                                         current_player.draw_card()
+                                        current_player.hand.remove(selected_card)
+                                        current_player.graveyard.append(selected_card)
                                         selected_card = None
                                         selected_card2 = None
                     # --- カードを選ぶ判定 ---
