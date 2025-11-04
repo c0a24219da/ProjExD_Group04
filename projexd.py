@@ -135,6 +135,47 @@ class Game:
             return "Player 1 Win (Life 0)"
         # 実際にはドロー時の山札切れチェックも必要
         return None
+    
+class StartScreen:
+    def __init__(self, screen):
+        self.screen = screen
+        self.font_big = pygame.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 60)
+        self.font_small = pygame.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
+
+    def run(self, result_message):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    return  # クリックされたら抜けてゲーム開始
+
+            self.screen.fill((0,0,0))
+            title = self.font_big.render("Kokaton Master's", True, (255,255,255))
+            msg = self.font_small.render("Click to Start", True, (255,255,255))
+            self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, SCREEN_HEIGHT//2 - 50))
+            self.screen.blit(msg, (SCREEN_WIDTH//2 - msg.get_width()//2, SCREEN_HEIGHT//2 + 50))
+
+            pygame.display.flip()
+
+class ResultScreen:
+    def __init__(self, screen):
+        self.screen = screen
+        self.font_big = pygame.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 60)
+        self.font_small = pygame.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
+
+    def run(self):
+        while True:
+            for event in pygame.event.get():
+                if self == False:
+                    self.screen.fill((0,0,0))
+                    title = self.font_big.render("Game Eng", True, (255,255,255))
+                    msg = self.font_small.render("遊んでくれてありがとう", True, (255,255,255))
+                    self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, SCREEN_HEIGHT//2 - 50))
+                    self.screen.blit(msg, (SCREEN_WIDTH//2 - msg.get_width()//2, SCREEN_HEIGHT//2 + 50))                
+                    
+                    pygame.display.flip()
 
 import pygame
 import sys
@@ -192,29 +233,6 @@ def draw_player_status(screen, player, x, y,current):
     screen.blit(mana_text, (x, y + 30))
     screen.blit(go_text, (x, y + 60))
 
-class StartScreen:
-    def __init__(self, screen):
-        self.screen = screen
-        self.font_big = pygame.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 60)
-        self.font_small = pygame.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
-
-    def run(self):
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    return  # クリックされたら抜けてゲーム開始
-
-            self.screen.fill((0,0,0))
-            title = self.font_big.render("Kokaton Master's", True, (255,255,255))
-            msg = self.font_small.render("Click to Start", True, (255,255,255))
-            self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, SCREEN_HEIGHT//2 - 50))
-            self.screen.blit(msg, (SCREEN_WIDTH//2 - msg.get_width()//2, SCREEN_HEIGHT//2 + 50))
-
-            pygame.display.flip()
-
 # --- メインゲームループ ---
 def run_game():
     game = Game()
@@ -223,6 +241,7 @@ def run_game():
     # 選択中のカード/クリーチャーを管理する変数
     selected_card = None 
     attack_card = None
+    result = None
     
     while running:
         current_player = game.current_turn_player
@@ -240,8 +259,11 @@ def run_game():
                     result = game.next_turn()
                     game.game_state = 'MAIN_PHASE'
                     if result:
-                        print(f"Game Over: {result}")
-                        running = False
+                        # print(f"Game Over: {result}")
+                        # running = False
+                        re = ResultScreen(screen)
+                        re.run(result)
+
                 # --- カード使用ボタンの判定 ---
                 if game.game_state == 'MAIN_PHASE':
                     use_card_rect = pygame.Rect(30, SCREEN_HEIGHT // 2 - 25, 120, 50)
@@ -327,6 +349,10 @@ def run_game():
         if game.check_win_condition() != None:
             print(f"Game Over: {result}")
             running = False
+            re = ResultScreen(screen)
+            re.run(running)
+
+    
     pygame.quit()
     sys.exit()
 
