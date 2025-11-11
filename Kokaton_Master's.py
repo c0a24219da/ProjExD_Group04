@@ -308,7 +308,7 @@ def start_bgm(file_path):
     pygame.mixer.music.play(-1)   
 
 # --- 描画ユーティリティ関数 ---
-def draw_card_on_screen(screen, card_obj, x, y, is_creature=False, is_tapped=False):
+def draw_card_on_screen(screen, card_obj, x, y, is_creature=False, is_tapped=False, is_selected=False):
     """カードを画面に描画する（簡略化された四角形）"""
     card_rect = pygame.Rect(x, y, 100, 140)
 
@@ -332,6 +332,11 @@ def draw_card_on_screen(screen, card_obj, x, y, is_creature=False, is_tapped=Fal
             img = pygame.image.load(card_obj.img)
             img = pygame.transform.rotozoom(img,0,0.25)
             screen.blit(img,card_rect)
+
+    if is_selected:
+        border_rect = card_rect.inflate(6, 6)
+        pygame.draw.rect(screen, RED, border_rect, 4, border_radius=8)
+        
     if is_tapped:
         color = (150, 150, 150) # タップしている場合は灰色に
         tap_img = pygame.Surface((100,140))
@@ -385,6 +390,7 @@ def run_game():
     
     # 選択中のカード/クリーチャーを管理する変数
     selected_card = None
+    selected_owner = None
     attack_card = None
     enemy_card = None
     target_card = None
@@ -397,7 +403,15 @@ def run_game():
     except pygame.error as e:
         print(f"BGMファイルのロードに失敗しました: {e}. {BGM_NORMAL}が存在するか確認してください。")
         current_bgm_state = 'NONE'
-    
+
+    #効果音の再生
+    try:
+        SE = pygame.mixer.Sound("決定ボタンを押す23.mp3")
+        SE.set_volume(0.7)
+    except pygame.error as e:
+        print(f"BGMファイルのロードに失敗しました: {e}. {BGM_NORMAL}が存在するか確認してください。")
+        current_bgm_state = 'NONE'
+
     while running:
         current_player = game.current_turn_player
         opponent_player = game.player2 if current_player == game.player1 else game.player1
@@ -452,6 +466,7 @@ def run_game():
                                     if(selected_card.id == 3):
                                         current_player.draw_card()
                                     selected_card = None
+                                    selected_owner = None
                                 elif(selected_card.type == "M"): # カードが呪文の場合
                                     if(selected_card.id == 5): # idが6の処理(今回のカードの処理)
                                         current_player.mana -= selected_card.cost
@@ -463,16 +478,24 @@ def run_game():
                                         current_player.hand.remove(selected_card)
                                         current_player.graveyard.append(selected_card)
                                         selected_card = None
+                                        selected_owner = None
                                         target_card = None
                     # --- カードを選ぶ判定 ---
                     if current_player == game.player1:
                         for i, card in enumerate(current_player.hand):
                             if pygame.Rect(200 + i * 110, SCREEN_HEIGHT - 170, 300 + i * 110, SCREEN_HEIGHT - 30).collidepoint(pos):
                                 selected_card = card
+                                selected_owner = game.player1
+                                if SE:  #効果音を鳴らす
+                                    SE.play()
                     else:
                         for i, card in enumerate(current_player.hand):
                             if pygame.Rect(200 + i * 110, 30, 300 + i * 110, 170).collidepoint(pos):
                                 selected_card = card
+                                selected_owner = game.player2
+                                if SE:  #効果音を鳴らす
+                                    SE.play()
+
                 # --- 攻撃の実装 --- 追加機能４
                 if current_player == game.player1:  # 攻撃するプレイヤーがプレイヤー1か2かを特定する
                     for i, card in enumerate(current_player.field):  # 自分のカードを選択、フィールド関数に存在するカードを取り出す
@@ -504,6 +527,7 @@ def run_game():
                             else:
                                 opponent_player.life -= attack_card.current_attack  # 攻撃先のカードが選択されていない、もしくは攻撃先のカードが選択されていない場合は相手のライフを攻撃する
                         attack_card = None  # 選んだ各カードの変数を初期化する
+                        selected_owner = None
                         enemy_card = None
 
                 
@@ -518,20 +542,27 @@ def run_game():
         
         # 手札の描画 (プレイヤー1: 下)
         for i, card in enumerate(game.player1.hand):
-            draw_card_on_screen(screen, card, 200 + i * 110, SCREEN_HEIGHT - 170)
+            is_sel = (card is selected_card) and (selected_owner == game.player1)
+            draw_card_on_screen(screen, card, 200 + i * 110, SCREEN_HEIGHT - 170, is_selected=is_sel)
         # 手札の描画 (プレイヤー2: 上)
         for i, card in enumerate(game.player2.hand):
-            draw_card_on_screen(screen, card, 200 + i * 110, 30)
+            is_sel = (card is selected_card) and (selected_owner == game.player2)
+            draw_card_on_screen(screen, card, 200 + i * 110, 30, is_selected=is_sel)
 
         # 場に出ているクリーチャーの描画 (プレイヤー1: 中央下)
         for i, creature in enumerate(game.player1.field):
+            is_sel = (creature is attack_card) or (creature is enemy_card)
             draw_card_on_screen(screen, creature, 200 + i * 110, SCREEN_HEIGHT - 350, 
-                                is_creature=True, is_tapped=creature.is_tapped)
+                                is_creature=True, is_tapped=creature.is_tapped, 
+                                is_selected=is_sel)
 
         # 場に出ているクリーチャーの描画 (プレイヤー2: 中央上)
         for i, creature in enumerate(game.player2.field):
+            is_sel = (creature is attack_card) or (creature is enemy_card)
             draw_card_on_screen(screen, creature, 200 + i * 110, 220, 
-                                is_creature=True, is_tapped=creature.is_tapped)
+                                is_creature=True, is_tapped=creature.is_tapped, 
+                                is_selected=is_sel)
+            
         # カード使用ボタン
         use_card_rect = pygame.Rect(30, SCREEN_HEIGHT // 2 - 25, 120, 50)
         pygame.draw.rect(screen, BLUE, use_card_rect, border_radius=5)
